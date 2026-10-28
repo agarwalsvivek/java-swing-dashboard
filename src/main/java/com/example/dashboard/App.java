@@ -4,72 +4,74 @@ import javax.swing.*;
 import java.awt.*;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class App {
 
-    private static int clicks = 0;   // only touched on the Swing thread
-
     public static void main(String[] args) {
-        // All Swing UI work must happen on the Event Dispatch Thread (EDT)
         SwingUtilities.invokeLater(App::createAndShow);
     }
 
     private static void createAndShow() {
         useNimbusLookAndFeel();
 
-        JFrame frame = new JFrame("Hello Dashboard");
+        JFrame frame = new JFrame("Stock Ticker");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout(10, 10));
 
         // ---- Header ----
-        JLabel title = new JLabel("Hello, Dashboard", SwingConstants.CENTER);
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
+        JLabel title = new JLabel("Stock Ticker (simulated prices)", SwingConstants.CENTER);
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 22f));
         title.setBorder(BorderFactory.createEmptyBorder(16, 16, 0, 16));
         frame.add(title, BorderLayout.NORTH);
 
-        // ---- Cards ----
-        JLabel statusValue = new JLabel("Running");
-        JLabel javaValue = new JLabel(System.getProperty("java.version"));
-        JLabel clicksValue = new JLabel("0");
+        // ---- Table ----
+        StockTableModel model = new StockTableModel();
+        JTable table = new JTable(model);
+        table.setAutoCreateRowSorter(true);   // click a column header to sort
+        table.setRowHeight(24);
 
-        JPanel cards = new JPanel(new GridLayout(1, 3, 12, 12));
-        cards.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
-        cards.add(card("Status", statusValue));
-        cards.add(card("Java version", javaValue));
-        cards.add(card("Clicks", clicksValue));
-        frame.add(cards, BorderLayout.CENTER);
+        JPanel center = new JPanel(new BorderLayout());
+        center.setBorder(BorderFactory.createEmptyBorder(0, 16, 0, 16));
+        center.add(new JScrollPane(table), BorderLayout.CENTER);
+        frame.add(center, BorderLayout.CENTER);
 
-        // ---- Footer: button + live clock ----
-        JButton clickMe = new JButton("Click me");
-        clickMe.addActionListener(e -> clicksValue.setText(String.valueOf(++clicks)));
-
-        JLabel clock = new JLabel();
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("HH:mm:ss");
-
-        // javax.swing.Timer fires on the EDT, so updating UI here is safe.
-        // This is the same pattern a stock ticker will use later.
-        Timer timer = new Timer(1000, e -> clock.setText("Time: " + LocalTime.now().format(fmt)));
-        timer.setInitialDelay(0);
-        timer.start();
-
+        // ---- Footer ----
+        JLabel lastUpdate = new JLabel();
         JPanel footer = new JPanel(new BorderLayout());
         footer.setBorder(BorderFactory.createEmptyBorder(0, 16, 12, 16));
-        footer.add(clickMe, BorderLayout.WEST);
-        footer.add(clock, BorderLayout.EAST);
+        footer.add(lastUpdate, BorderLayout.EAST);
         frame.add(footer, BorderLayout.SOUTH);
 
-        frame.setSize(640, 300);
-        frame.setLocationRelativeTo(null);   // center on screen
+        // ---- Data updates ----
+        QuoteSimulator simulator = new QuoteSimulator(startingPrices());
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("HH:mm:ss");
+
+        Runnable refresh = () -> {
+            model.setQuotes(simulator.nextQuotes());
+            lastUpdate.setText("Last update: " + LocalTime.now().format(fmt));
+        };
+        refresh.run();   // initial load
+
+        // Runs on the EDT every second, so updating the model here is safe
+        Timer timer = new Timer(1000, e -> refresh.run());
+        timer.start();
+
+        frame.setSize(640, 360);
+        frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
 
-    private static JPanel card(String heading, JLabel value) {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createTitledBorder(heading));
-        value.setHorizontalAlignment(SwingConstants.CENTER);
-        value.setFont(value.getFont().deriveFont(Font.BOLD, 18f));
-        panel.add(value, BorderLayout.CENTER);
-        return panel;
+    /** Arbitrary starting values for the demo, not real market prices. */
+    private static Map<String, Double> startingPrices() {
+        Map<String, Double> prices = new LinkedHashMap<>();
+        prices.put("AAPL", 200.00);
+        prices.put("MSFT", 400.00);
+        prices.put("GOOG", 150.00);
+        prices.put("AMZN", 180.00);
+        prices.put("TSLA", 250.00);
+        return prices;
     }
 
     private static void useNimbusLookAndFeel() {
