@@ -1,0 +1,30 @@
+# Gradle
+.gradle/
+build/
+
+# VS Code Java extension (generates Eclipse-style metadata)
+bin/
+.classpath
+.project
+.settings/
+.factorypath
+
+# VS Code (keep shared settings if you want them in git)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# IntelliJ (in case you ever open it there)
+.idea/
+*.iml
+out/
+
+# Java / JVM
+*.class
+*.log
+hs_err_pid*
+replay_pid*
+
+# OS
+.DS_Store
+Thumbs.db
